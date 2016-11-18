@@ -24,6 +24,7 @@
 * Includes
 */
 #include "Arduino.h"
+#include "prescaler.h"
 #include "ISD1700.h"
 
 /*
@@ -450,9 +451,7 @@ void ISD1700::set_play(uint16_t startAddr, uint16_t endAddr)
 */
 void ISD1700::set_rec(uint16_t startAddr, uint16_t endAddr)
 {
- digitalWrite(3, HIGH);
  sendCmd(0x81, startAddr, endAddr);
- digitalWrite(4, HIGH);
 }
 
 /*

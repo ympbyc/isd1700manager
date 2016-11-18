@@ -19,7 +19,7 @@ Default Setup
 
 Address range is configured for ISD1790. Adjust LAST_ADDR macro value to match your chip. (Refer to ISD1700 Design Guide)
 
-Number of sections the memory is devided into is set by SLOT_NUM macro.
+Number of sections the memory gets devided into is set by SLOT_NUM macro.
 
 ### APC register
 

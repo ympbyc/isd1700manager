@@ -9,8 +9,13 @@
  * OneButton lib by Matthias Hertel http://www.mathertel.de/Arduino/OneButtonLibrary.aspx
  */
 
-#include <ISD1700.h>
+#include <avr/interrupt.h>
+#include <avr/power.h>
+#include <avr/sleep.h>
+#include <avr/io.h>
+#include <prescaler.h>
 #include <EEPROM.h>
+#include <ISD1700.h>
 #include <OneButton.h>
 #include <Timer.h>
 
@@ -28,6 +33,12 @@
 #define LEDFREQ 100
 #define LEDREP 5
 
+#define REC_TIMEUP ((90 * 1000) / SLOT_NUM)
+#define AVR_PWR_DWN_TIME 3000
+
+int interrupt_main_btn = digitalPinToInterrupt(MAIN_BTN);
+int interrupt_sub_btn = digitalPinToInterrupt(SUB_BTN);
+
 ISD1700 chip(SS); // Initialize chipcorder with
                  // SS at Arduino's digital pin 10
 
@@ -35,17 +46,33 @@ OneButton btn(MAIN_BTN, true);
 OneButton btn2(SUB_BTN, true);
 
 Timer tim;
+int tim_id;
+int c_w_t_id;
+int r_tu_t_id;
+int avr_pd_t_id;
 
 uint16_t apc = 0;
 
 uint16_t slot_addrs[SLOT_NUM];
 uint16_t end_addrs[SLOT_NUM];
 int cur_slot = 0;
-int tim_id;
 
 void setup() {
   int i;
-  Serial.begin(9600);
+  Serial.begin(115200);
+  /* lower power consumption */
+  DDRD &= B00000011;       // set Arduino pins 2 to 7 as inputs
+  DDRB = B00000000;        // set pins 8 to 13 as inputs
+  PORTD |= B11111100;      // enable pullups on pins 2 to 7
+  PORTB |= B11111111;      // enable pullups on pins 8 to 13
+  setClockPrescaler(CLOCK_PRESCALER_1); //8MHz
+  
+  // re-set pin-mode for SPI after above setting
+  pinMode(SCK_PIN, OUTPUT);
+  pinMode(MOSI_PIN, OUTPUT);
+  pinMode(MISO_PIN, INPUT);
+  pinMode(SS, OUTPUT);
+
   for (i=LEDI; i<LEDI+LEDN; i++)
     pinMode(i, OUTPUT);
   pinMode(MAIN_BTN, INPUT_PULLUP);
@@ -55,10 +82,10 @@ void setup() {
   btn.setPressTicks(400);
   btn2.setClickTicks(300);
   btn2.setPressTicks(1500); //press longer for g_erase
-  btn.attachClick(single_click);
-  btn.attachDoubleClick(double_click);
-  btn.attachLongPressStart(long_press);
-  btn.attachLongPressStop(long_press_end);
+  btn.attachClick(playback);
+  btn.attachDoubleClick(forward);
+  btn.attachLongPressStart(rec);
+  btn.attachLongPressStop(rec_end);
   btn2.attachClick(erase_one);
   btn2.attachLongPressStart(erase_all);
   digitalWrite(SS, HIGH); // just to ensure
@@ -85,54 +112,76 @@ void setup() {
 
 bool chip_wakeup () {
   // Power Up
+  tim.stop(avr_pd_t_id); //clear pwrdwn timeout
+  Serial.println("ISD1700 wakeup");
   chip.rd_status();
   if (! chip.PU()) chip.pu();
   delay(10);
-  chip.clr_int();
   chip.stop(); //stop whatever it's doing
+  chip.clr_int();
   if (chip.RDY()) return true;
   return false;
 }
 
 bool chip_cleanup () {
+  tim.stop(c_w_t_id);
   Serial.print("Status---> ");
   Serial.print(chip.CMD_ERR()? "CMD_ERR ": " ");
   Serial.print(chip.PU()? "PU ": " ");
   Serial.print(chip.RDY()? "RDY ": "Not_RDY");
   Serial.println();
-  //delay(1);
-  //chip.pd();
+  c_w_t_id = tim.every(1000, attempt_pd);
 }
 
-void single_click () {
+void attempt_pd () {
+  chip.rd_status();
+  if (chip.INT() || chip.EOM()) {
+    tim.stop(c_w_t_id);
+    chip.pd();
+    Serial.println(chip.CMD_ERR() ? "pd CMD_ERR" : "ISD1700 powerdown");
+    avr_pd_t_id = tim.after(AVR_PWR_DWN_TIME, avr_sleep);
+    Serial.print("PWRDWN Timer id: "); Serial.println(avr_pd_t_id);
+  }
+}
+
+void playback () {
+  if ( ! EEPROM[cur_slot]) return;
   if ( ! chip_wakeup()) return;
   chip.set_play(slot_addrs[cur_slot], end_addrs[cur_slot]);
-  tim.oscillate(LEDI+cur_slot, LEDFREQ, HIGH, LEDREP);
+  tim.stop(tim_id);
+  tim_id = tim.oscillate(LEDI+cur_slot, LEDFREQ, HIGH, LEDREP);
   chip_cleanup();
 }
 
-void double_click () {
+void forward () {
   if ( ! chip_wakeup()) return;
   chip.stop();
   //chip.fwd();
   cur_slot = next_occupied_slot(cur_slot);
   chip.set_play(slot_addrs[cur_slot], end_addrs[cur_slot]);
-  tim.oscillate(LEDI+cur_slot, LEDFREQ, HIGH, LEDREP);
+  tim.stop(tim_id);
+  tim_id = tim.oscillate(LEDI+cur_slot, LEDFREQ, HIGH, LEDREP);
   chip_cleanup();
 }
 
-void long_press () {
+void rec () {
   int next_slot;
   if ( ! chip_wakeup()) return;
   next_slot = next_available_slot(cur_slot);
   if (next_slot < 0) return;
   chip.set_rec(slot_addrs[next_slot], end_addrs[next_slot]);
+  tim.stop(tim_id);
   tim_id = tim.oscillate(LEDI+next_slot, LEDFREQ, HIGH);
   EEPROM.write(next_slot, 1);
   cur_slot = next_slot;
+  r_tu_t_id = tim.after(REC_TIMEUP, rec_end); //ensure rec_end gets called
 }
 
-void long_press_end () {
+void rec_end () {
+  Serial.println("rec end");
+  tim.stop(tim_id);
+  tim.stop(r_tu_t_id);
+  chip.stop();
   led_update();
   chip_cleanup();
 }
@@ -169,6 +218,12 @@ void led_update () {
   }
 }
 
+void led_off () {
+  int i;
+  for (i=0; i<SLOT_NUM; i++)
+    digitalWrite(LEDI+i, LOW);
+}
+
 int next_available_slot (int cur) {
   for (int i=0; i<SLOT_NUM; i++) {
     if ( ! EEPROM[i]) return i;
@@ -182,6 +237,30 @@ int next_occupied_slot (int cur) {
     if (EEPROM[i % SLOT_NUM]) return i % SLOT_NUM;
   }
   return 0;
+}
+
+void pinInterrupt () {
+  sleep_disable(); //Wait for an interrupt, disable, and continue
+  detachInterrupt(interrupt_main_btn);
+  detachInterrupt(interrupt_sub_btn);
+}
+
+void avr_sleep () {
+  Serial.println("avr_sleep reached");
+  if (digitalRead(MAIN_BTN) == LOW || digitalRead(SUB_BTN) == LOW) return;
+  sleep_enable();  //Set sleep enable (SE) bit
+  attachInterrupt(interrupt_main_btn, pinInterrupt, LOW);
+  attachInterrupt(interrupt_sub_btn,  pinInterrupt, LOW);
+  delay(100);
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  led_off();
+  Serial.println("Arduino PWR_DOWN");
+  delay(10);
+  sleep_mode();    //Put the device to sleep
+  
+  sleep_disable(); //Wait for an interrupt, disable, and continue
+  Serial.println("Arduino Wakeup");
+  led_update();
 }
 
 void loop() {

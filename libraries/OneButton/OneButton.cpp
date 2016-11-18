@@ -8,6 +8,7 @@
 // Changelog: see OneButton.h
 // -----
 
+#include "prescaler.h"
 #include "OneButton.h"
 
 // ----- Initialization and Default Values -----

@@ -27,6 +27,7 @@
 #include "WProgram.h"
 #endif
 
+#include "prescaler.h"
 #include "Timer.h"
 
 Timer::Timer(void)
@@ -36,7 +37,7 @@ Timer::Timer(void)
 int8_t Timer::every(unsigned long period, void (*callback)(), int repeatCount)
 {
 	int8_t i = findFreeEventIndex();
-	if (i == -1) return -1;
+	if (i == NO_TIMER_AVAILABLE) return NO_TIMER_AVAILABLE;
 
 	_events[i].eventType = EVENT_EVERY;
 	_events[i].period = period;
@@ -104,6 +105,7 @@ int8_t Timer::pulseImmediate(uint8_t pin, unsigned long period, uint8_t pulseVal
 
 void Timer::stop(int8_t id)
 {
+	Serial.print("Timer id to stop: "); Serial.println(id);
 	if (id >= 0 && id < MAX_NUMBER_OF_EVENTS) {
 		_events[id].eventType = EVENT_NONE;
 	}
@@ -127,12 +129,18 @@ void Timer::update(unsigned long now)
 }
 int8_t Timer::findFreeEventIndex(void)
 {
+	bool found = false;
+	int j;
 	for (int8_t i = 0; i < MAX_NUMBER_OF_EVENTS; i++)
 	{
 		if (_events[i].eventType == EVENT_NONE)
 		{
-			return i;
+			if (_events[i].lastEventTime <= _events[j].lastEventTime) {
+				found = true;
+				j = i;
+			}
 		}
 	}
+	if (found) return j;
 	return NO_TIMER_AVAILABLE;
 }

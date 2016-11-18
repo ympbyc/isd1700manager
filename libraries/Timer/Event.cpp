@@ -27,11 +27,13 @@
 #include "WProgram.h"
 #endif
 
+#include "prescaler.h"
 #include "Event.h"
 
 Event::Event(void)
 {
 	eventType = EVENT_NONE;
+	lastEventTime = 0;
 }
 
 void Event::update(void)
@@ -42,7 +44,7 @@ void Event::update(void)
 
 void Event::update(unsigned long now)
 {
-	if (now - lastEventTime >= period)
+	if (abs(now - lastEventTime) >= period)
 	{
 		switch (eventType)
 		{
