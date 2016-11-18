@@ -14,10 +14,10 @@ It's a WIP and a little buggy.
 Features
 --------
 
-+ Fragmented memory management: divides the memory into N fixed-size sections.
++ Fragmented memory management: divides the memory into N fixed-size randomly-accessible sections.
 + LED indicators: N LEDs can be attached to IO pins to indicate memory occupancy status and cursor position.
 + Multi-function buttons: Reduce the number of pushbuttons by utilizing single-click/double-click/long-press actions.
-+ Sleep mode: Arduino enters SLEEP_MODE_PWR_DOWN after putting ISD1700 to power-down mode.
++ Sleep mode: Arduino enters SLEEP_MODE_PWR_DOWN after putting ISD1700 to power-down mode. Wakes up on button action and immediately executes the given command.
 
 \* N being an integer
 
