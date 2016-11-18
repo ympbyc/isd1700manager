@@ -1,3 +1,14 @@
+/*
+ * ISD1700 Manager sketch
+ * Author: Minori Yamashita
+ * Contact: ympbyc@gmail.com
+ * 
+ * Thanks! to following library authors:
+ * ISD1700 lib by neuron_upheaval https://forum.arduino.cc/index.php?topic=52509.0
+ * Timer lib by Simon Monk http://playground.arduino.cc/Code/Timer
+ * OneButton lib by Matthias Hertel http://www.mathertel.de/Arduino/OneButtonLibrary.aspx
+ */
+
 #include <ISD1700.h>
 #include <EEPROM.h>
 #include <OneButton.h>
@@ -6,6 +17,7 @@
 #define SS 10
 #define FIRST_ADDR 0x010
 #define LAST_ADDR 0x2df
+#define APC 0xE1 //000011100001
 #define SLOT_NUM 5
 
 #define MAIN_BTN 3
@@ -34,7 +46,6 @@ int tim_id;
 void setup() {
   int i;
   Serial.begin(9600);
-  Serial.println("Sketch is starting up");
   for (i=LEDI; i<LEDI+LEDN; i++)
     pinMode(i, OUTPUT);
   pinMode(MAIN_BTN, INPUT_PULLUP);
@@ -53,7 +64,7 @@ void setup() {
   digitalWrite(SS, HIGH); // just to ensure
   while (!chip_wakeup())
     delay(10);
-  apc |= 0xE1; //000011100001
+  apc |= APC;
   chip.wr_apc2(apc);
 
   //erase
@@ -69,12 +80,10 @@ void setup() {
   for (i=0; i<SLOT_NUM; i++) {
     slot_addrs[i] = floor((LAST_ADDR - FIRST_ADDR) / SLOT_NUM) * i + FIRST_ADDR + i;
     end_addrs[i] = floor((LAST_ADDR - FIRST_ADDR) / SLOT_NUM) * (i+1) + FIRST_ADDR + i;
-    Serial.println(end_addrs[i], HEX);
   }
 }
 
 bool chip_wakeup () {
-  Serial.print("CURRENT SLOT: "); Serial.println(cur_slot);
   // Power Up
   chip.rd_status();
   if (! chip.PU()) chip.pu();
@@ -129,7 +138,6 @@ void long_press_end () {
 }
 
 void erase_one () {
-  Serial.println("erase_one");
   if ( ! chip_wakeup()) return;
   chip.set_erase(slot_addrs[cur_slot], end_addrs[cur_slot]);
   EEPROM.write(cur_slot, 0);
@@ -171,7 +179,6 @@ int next_available_slot (int cur) {
 int next_occupied_slot (int cur) {
   int nxt = (cur + 1) % SLOT_NUM;
   for (int i=nxt; i<SLOT_NUM+nxt; i++) {
-    Serial.print(i % SLOT_NUM); Serial.print(" ");
     if (EEPROM[i % SLOT_NUM]) return i % SLOT_NUM;
   }
   return 0;
