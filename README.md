@@ -3,6 +3,8 @@ ISD1700 Fragmented Memory Manager
 
 This Arduino sketch controls ISD1700 chips over SPI.
 
+![Test Setup](docs/test-setup.jpg?raw=true "Test Setup")
+
 Features
 --------
 
@@ -62,3 +64,11 @@ Default Wiring
 | ...     | LEDN-1   |
 | D3      | MAIN_BTN |
 | D2      | SUB_BTN  |
+
+
+Schematic
+---------
+
+![ISD1700 Schematic](docs/schematic-isd1700.jpg?raw=true "ISD1700 Schematic")
+![Arduino Schematic](docs/schematic-arduino.jpg?raw=true "Arduino Schematic")
+
