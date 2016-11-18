@@ -4,7 +4,7 @@ ISD1700 Fragmented Memory Manager
 Arduino sketch that controls ISD1700 record/playback ic over SPI. It's packed with awesome features. Read on.
 
 <!-- ![Test Setup](docs/test-setup.jpg?raw=true "Test Setup") -->
-<img src="/ympbyc/isd1700manager/raw/master/docs/test-setup.jpg?raw=true" alt="Test Setup" title="Test Setup" width="480" style="max-width:100%;">
+<img src="docs/test-setup.jpg?raw=true" alt="Test Setup" title="Test Setup" width="480" style="max-width:100%;">
 
 Caution
 -------
@@ -77,6 +77,6 @@ Schematic
 ---------
 
 <!-- ![ISD1700 Schematic](docs/schematic-isd1700.jpg?raw=true "ISD1700 Schematic") -->
-<img src="/ympbyc/isd1700manager/raw/master/docs/schematic-isd1700.jpg?raw=true" alt="ISD1700 Schematic" title="ISD1700 Schematic" width="480" style="max-width:100%;">
+<img src="docs/schematic-isd1700.jpg?raw=true" alt="ISD1700 Schematic" title="ISD1700 Schematic" width="480" style="max-width:100%;">
 <!-- ![Arduino Schematic](docs/schematic-arduino.jpg?raw=true "Arduino Schematic") -->
-<img src="/ympbyc/isd1700manager/raw/master/docs/schematic-arduino.jpg?raw=true" alt="Arduino Schematic" title="Arduino Schematic" width="480" style="max-width:100%;">
+<img src="docs/schematic-arduino.jpg?raw=true" alt="Arduino Schematic" title="Arduino Schematic" width="480" style="max-width:100%;">
