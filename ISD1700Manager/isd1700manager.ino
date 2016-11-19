@@ -65,7 +65,7 @@ void setup() {
   DDRB = B00000000;        // set pins 8 to 13 as inputs
   PORTD |= B11111100;      // enable pullups on pins 2 to 7
   PORTB |= B11111111;      // enable pullups on pins 8 to 13
-  setClockPrescaler(CLOCK_PRESCALER_1); //8MHz
+  setClockPrescaler(CLOCK_PRESCALER_2); //8MHz
   
   // re-set pin-mode for SPI after above setting
   pinMode(SCK_PIN, OUTPUT);
